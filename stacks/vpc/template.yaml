@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  "/stacks/vpc/template.yaml; VPC Network infra. for the SmartOffice-App"
+Parameters:
+    VpcCIDR:
+      Type: String
+
+Resources:
+  SmartOfficeVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: True
+      EnableDnsHostnames: True
+      Tags:
+        - Key: Name
+          Value: !Sub "VPC-${AWS::StackName}" 
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      VpcId: !Ref SmartOfficeVPC
+      CidrBlock: !Select [0, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name
+          Value: !Sub "PublicSubnetA-${AWS::StackName}"  
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      VpcId: !Ref SmartOfficeVPC
+      CidrBlock: !Select [1, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name
+          Value: !Sub "PublicSubnetB-${AWS::StackName}" 
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select: 
+          - 2
+          - Fn::GetAZs: ""
+      VpcId: !Ref SmartOfficeVPC
+      CidrBlock: !Select [2, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name
+          Value: !Sub "PublicSubnetC-${AWS::StackName}" 
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      VpcId: !Ref SmartOfficeVPC
+      CidrBlock: !Select [3, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name 
+          Value: !Sub "PrivateSubnetA-${AWS::StackName}" 
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      VpcId: !Ref SmartOfficeVPC
+      CidrBlock: !Select [4, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name
+          Value: !Sub "PrivateSubnetB-${AWS::StackName}" 
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select: 
+          - 2
+          - Fn::GetAZs: ""
+      VpcId: vpc-id
+      CidrBlock: !Select [5, !Cidr [!GetAtt SmartOfficeVPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: name
+          Value: !Sub "PrivateSubnetC-${AWS::StackName}" 
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: name
+          Value: !Sub "InternetGateway-${AWS::StackName}" 
+  IgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref SmartOfficeVPC
+      InternetGatewayId: !Ref InternetGateway
+  ElasticIpNatGw:
+    Type: AWS::EC2::EIP
+    DependsOn:
+      - SmartOfficeVPC
+    Properties:
+      Domain: vpc
+  #currently only one natgtw in one publicSubnet(one AZ) is available for all private subnets(all other AZs):
+  NatGateway: 
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIpNatGw.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags:
+        - Key: name
+          Value: !Sub "NatGateway-${AWS::StackName}" 
+  RouteTablePrivateSubnets:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SmartOfficeVPC
+      Tags:
+        - Key: name
+          Value: !Sub "RouteTablePrivateSubnets-${AWS::StackName}" 
+    # default route for vpc internal communication(=vpcCIDR<=>local),
+    # is created implicitly by cloudformation and cannot be specified.
+  RouteNATGtw:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateSubnets
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetA
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetB
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetC
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+
+  RouteTablePublicSubnets:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SmartOfficeVPC
+      Tags:
+        - Key: name
+          Value: !Sub "RouteTablePublicSubnets-${AWS::StackName}" 
+  RouteInetGtw:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePublicSubnets
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref InternetGateway
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetA
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetB
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetC
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+
+Outputs:
+  VpcCidr:
+    Description: The Id of the VPC which was created by the stack
+    Value: !Ref VpcCIDR
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", VpcCidr ]]
+  PrivateSubnetA:
+    Description: The Cidr of PublicSubnetA
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetA ]]
+  PrivateSubnetB:
+    Description: The Cidr of PrivateSubnetB
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetB ]]
+  PrivateSubnetC:
+    Description: The Cidr of PrivateSubnetC
+    Value: !Ref PrivateSubnetC
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetC ]]
+
+
+
+
