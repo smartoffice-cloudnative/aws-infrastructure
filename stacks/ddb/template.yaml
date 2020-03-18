@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: The SmartOffice DynamoDB-Table Stack
+
+Resources: 
+  ddbTable: 
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - AttributeName: "partitionkey"
+          AttributeType: "S"
+        - AttributeName: "sortkey"
+          AttributeType: "S"  
+
+      KeySchema: 
+        - AttributeName: "partitionkey"
+          KeyType: "HASH"
+        - AttributeName: "sortkey"
+          KeyType: "RANGE"  
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: !Sub "smartoffice-${AWS::StackName}-table"
+
+Outputs:
+  DDBTableArnOutput:
+    Description: ARN of the DynamoDbTable
+    Value: !GetAtt ddbTable.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:arn"

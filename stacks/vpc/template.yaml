@@ -196,19 +196,19 @@ Outputs:
     Description: The Id of the VPC which was created by the stack
     Value: !Ref VpcCIDR
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", VpcCidr ]]
+      Name: !Sub "${AWS::StackName}:VPC"
   PrivateSubnetA:
     Description: The Cidr of PublicSubnetA
     Value: !Ref PrivateSubnetA
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetA ]]
+      Name: !Sub "${AWS::StackName}:PrivateSubnetA"
   PrivateSubnetB:
     Description: The Cidr of PrivateSubnetB
     Value: !Ref PrivateSubnetB
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetB ]]
+      Name: !Sub "${AWS::StackName}:PrivateSubnetB"
   PrivateSubnetC:
     Description: The Cidr of PrivateSubnetC
     Value: !Ref PrivateSubnetC
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", PrivateSubnetC ]]
+      Name: !Sub "${AWS::StackName}:PrivateSubnetC"

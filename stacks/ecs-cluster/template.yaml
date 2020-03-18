@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: The SmartOffice ECS-Cluster Stack
+
+Resources:
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Sub "${AWS::StackName}"
+      Tags:
+        - Key: Name
+          Value: ECS-Cluster-SmartOffice
+
+Outputs:
+  ECSClusterOutput:
+    Description: The ECS-Cluster
+    Value: !GetAtt ECSCluster.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:ecsArn"

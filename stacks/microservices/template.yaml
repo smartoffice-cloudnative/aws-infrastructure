@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation-Stack for Microservices
+
+Parameters:
+  MicroserviceName:
+    Type: String
+  # DDBStack:
+  #   Type: String
+  Stage:
+    Type: String
+  VpcStack:
+    Type: String
+  TaskMemory:
+    Type: String 
+  TaskCPU:
+    Type: String 
+  ContainerPort:
+    Type: String
+  VpcStack:
+    Type: String
+  ECSClusterStack:
+    Type: String
+    
+Resources: 
+  ECRRepository: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: !Sub "${MicroserviceName}-registry"
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt TaskRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ContainerDefinitions:
+        - Name: !Ref MicroserviceName
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${MicroserviceName}-ecr:latest"
+          Cpu: !Ref TaskCPU
+          Memory: !Ref TaskMemory
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              HostPort: !Ref ContainerPort
+          Essential: true
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub "${MicroserviceName}-service"
+      TaskDefinition: !Ref TaskDefinition
+      Cluster: 
+        Fn::ImportValue: !Sub '${ECSClusterStack}:ecsArn'
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 0
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${VpcStack}:PrivateSubnetA"
+            - Fn::ImportValue: !Sub "${VpcStack}:PrivateSubnetB"
+            - Fn::ImportValue: !Sub "${VpcStack}:PrivateSubnetC"
+
+
+
+
+
