@@ -27,3 +27,4 @@ Outputs:
     Value: !GetAtt ddbTable.Arn
     Export:
       Name: !Sub "${AWS::StackName}:arn"
+

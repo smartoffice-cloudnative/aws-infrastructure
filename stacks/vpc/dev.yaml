@@ -1,4 +1,0 @@
-Parameters:
-  VpcCIDR:
-    Default: 192.168.0.0/24
-    Description: The Cidr for the VPC

@@ -17,12 +17,11 @@ help:
 	@echo "    ...currently not available..."
 	@echo -e "\n  To destroy the created infrastructure on prod-env:"
 	@echo "    ...currently not available..."
+	@echo -e "\n  ===================================================="
 
-# deployDEV: _deployDevVPC _deployDevECSCluster _deployDevDynamoDBTable _deployClimateMicroservice
-deployDEV: _deployDevVPC
+deployDEV: _deployDevVPC _deployDevECSCluster _deployDevDynamoDBTable _deployClimateMicroservice
 
-# destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destroyClimateMicroservice
-destroyDEV: _destroyDevVPC
+destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destroyClimateMicroservice
 
 
 # ####################################################################################################################################
@@ -34,7 +33,7 @@ destroyDEV: _destroyDevVPC
 # ######################
 _deployDevVPC:
 	@echo "Creating the VPC-DEV stack..."
-	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-vpc --template-body file://vpc/template.yaml --parameters file://vpc/prod.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
+	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-vpc --template-body file://vpc/template.yaml --parameters file://vpc/dev.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
 	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-vpc --region ${AWS_REGION} --profile ${AWS_PROFILE}
