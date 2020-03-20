@@ -1,25 +1,11 @@
 {
-  "Parameters": [
-    {
-      "MicroserviceName": "climate"
-    },
-    {
-      "Stage": "dev"
-    },
-    {
-      "TaskMemory": "512"
-    },
-    {
-      "TaskCPU": "256"
-    },
-    {
-      "ContainerPort": "8080"
-    },
-    {
-      "VpcStack": "dev-vpc"
-    },
-    {
-      "ECSClusterStack": "dev-ecs-cluster"
-    }
-  ]
+  "Parameters": {
+    "MicroserviceName": "climate",
+    "Stage": "prod",
+    "TaskMemory": "512",
+    "TaskCPU": "256",
+    "ContainerPort": "8080",
+    "VpcStack": "dev-vpc",
+    "ECSClusterStack": "dev-ecs-cluster"
+  }
 }

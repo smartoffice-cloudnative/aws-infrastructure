@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: The SmartOffice DynamoDB-Table Stack
 
+Parameters:
+  MicroserviceName:
+    Type: String
+
 Resources: 
   ddbTable: 
     Type: AWS::DynamoDB::Table
@@ -19,7 +23,7 @@ Resources:
       ProvisionedThroughput: 
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
-      TableName: !Sub "smartoffice-${AWS::StackName}-table"
+      TableName: !Sub "${MicroserviceName}-${AWS::StackName}-table"
 
 Outputs:
   DDBTableArnOutput:

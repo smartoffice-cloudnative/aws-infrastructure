@@ -1,43 +1,11 @@
 {
-    "Parameters": [
-      {
-        "ParameterKey": "MicroserviceName",
-        "ParameterValue": "officeplaces"
-      },
-      {
-        "ParameterKey": "Stage",
-        "ParameterValue": "dev"
-      },
-      {
-        "ParameterKey": "TaskMemory",
-        "ParameterValue": "512"
-      },
-      {
-        "ParameterKey": "TaskCPU",
-        "ParameterValue": "256"
-      },
-      {
-        "ParameterKey": "ContainerPort",
-        "ParameterValue": "8080"
-      },
-      {
-        "ParameterKey": "VpcStack",
-        "ParameterValue": "dev-vpc"
-      },
-      {
-        "ParameterKey": "ECSClusterStack",
-        "ParameterValue": "dev-ecs-cluster"
-      }
-    ],
-    "Capabilities": ["CAPABILITY_NAMED_IAM"],
-    "Tags": [
-      {
-        "Key": "MicroserviceName",
-        "Value": "officeplaces"
-      },
-      {
-        "Key": "Stage",
-        "Value": "dev"
-      }
-    ]
+  "Parameters": {
+    "MicroserviceName": "officeplaces",
+    "Stage": "dev",
+    "TaskMemory": "512",
+    "TaskCPU": "256",
+    "ContainerPort": "8080",
+    "VpcStack": "dev-vpc",
+    "ECSClusterStack": "dev-ecs-cluster"
   }
+}

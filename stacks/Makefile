@@ -3,7 +3,7 @@ AWS_REGION ?= eu-central-1
 AWS_PROFILE ?= default
 STACK_NAME_DEV ?= dev
 
-.PHONY = deploy deployDEV destroyDEV _deployDevVPC _destroyDevVPC _deployDevDynamoDBTable _destroyDevDynamoDBTable _deployClimateMicroservice _destroyClimateMicroservice
+.PHONY = deploy deployDEV destroyDEV _deployDevVPC _destroyDevVPC _deployDevDynamoDBTable _destroyDevDynamoDBTable _deployClimateMicroservice _destroyClimateMicroservice _deployPipeline _destroyPipeline
 
 help:
 	@echo "Usage: "
@@ -23,6 +23,27 @@ deployDEV: _deployDevVPC _deployDevECSCluster _deployDevDynamoDBTable _deployCli
 
 destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destroyClimateMicroservice
 
+deployPipeline: _deployPipeline
+destroyPipeline: _destroyPipeline
+
+# ####################################################################################################################################
+# CI / CD
+# ####################################################################################################################################
+
+_deployPipeline:
+	@echo "Creating the Pipeline..."
+	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-cf-pipeline --template-body file://cicd/cloudformation/template.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
+	@echo "Waiting till all resources have been created... this can take some minutes"
+	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
+_destroyPipeline:
+	@echo "Destroying the VPC-DEV stack..."
+	@aws s3 rm s3://codepipeline-cf-source/CfPipeline --recursive
+	@aws cloudformation delete-stack --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
+	@echo "Waiting till all resources have been destroyed... this can take some minutes"
+	@aws cloudformation wait stack-delete-complete --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 # ####################################################################################################################################
 # D E V - S T A G E

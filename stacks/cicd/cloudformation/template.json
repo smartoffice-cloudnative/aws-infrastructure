@@ -1,0 +1,87 @@
+{
+  "Resources": {
+    "SourceCodeBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "codepipeline-cf-source",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Codepipeline SourceCode for CF"
+          }
+        ]
+      }
+    },
+    "Pipeline": {
+      "Type": "AWS::CodePipeline::Pipeline",
+      "DependsOn" : "SourceCodeBucket",
+      "Properties": {
+        "ArtifactStore": {
+          "Location": "codepipeline-cf-source",
+          "Type": "S3"
+        },
+        "Name": "CfPipeline",
+        "RestartExecutionOnUpdate": false,
+        "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+        "Stages": [
+          {
+            "Name": "CheckoutSource",
+            "Actions": [
+              {
+                "Name": "CheckoutSource",
+                "ActionTypeId": {
+                  "Category": "Source",
+                  "Owner": "ThirdParty",
+                  "Provider": "GitHub",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "Owner": "smartoffice-cloudnative",
+                  "Repo": "aws-infrastructure",
+                  "Branch": "master",
+                  "PollForSourceChanges": "false",
+                  "OAuthToken": "c472a37fdb3090e779b905d4df9921fd07090902"
+                },
+                "OutputArtifacts": [
+                  {
+                    "Name": "SourceArtifact"
+                  }
+                ],
+                "RunOrder": 1
+              }
+            ]
+          },
+          {
+            "Name": "DeployCloudformation",
+            "Actions": [
+              {
+                "Name": "CfVPC",
+                "InputArtifacts": [
+                  {
+                    "Name": "SourceArtifact"
+                  }
+                ],
+                "ActionTypeId": {
+                  "Category": "Deploy",
+                  "Owner": "AWS",
+                  "Provider": "CloudFormation",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "ActionMode": "CREATE_UPDATE",
+                  "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
+                  "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
+                  "StackName": "dev-vpc",
+                  "TemplateConfiguration": "SourceArtifact::stacks/vpc/dev.json",
+                  "TemplatePath": "SourceArtifact::stacks/vpc/template.yaml"
+                },
+                "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+                "RunOrder": 2
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
