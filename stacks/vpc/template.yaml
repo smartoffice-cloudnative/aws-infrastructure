@@ -244,7 +244,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}:PublicSubnetB"
   PublicSubnetC:
-    Description: The id of PublicSubnetB
-    Value: !Ref PublicSubnetB
+    Description: The id of PublicSubnetC
+    Value: !Ref PublicSubnetC
     Export:
       Name: !Sub "${AWS::StackName}:PublicSubnetC"
