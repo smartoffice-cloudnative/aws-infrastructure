@@ -3,7 +3,7 @@ AWS_REGION ?= eu-central-1
 AWS_PROFILE ?= default
 STACK_NAME_DEV ?= dev
 
-.PHONY = deploy deployDEV destroyDEV _deployDevVPC _destroyDevVPC _deployDevDynamoDBTable _destroyDevDynamoDBTable _deployClimateMicroservice _destroyClimateMicroservice _deployPipeline _destroyPipeline
+.PHONY = deploy deployDEV destroyDEV _deployDevVPC _destroyDevVPC _deployDevDynamoDBTable _destroyDevDynamoDBTable _deployClimateMicroservice _destroyClimateMicroservice _deployPipeline _destroyPipeline _deployALB
 
 help:
 	@echo "Usage: "
@@ -26,16 +26,26 @@ destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destr
 deployPipeline: _deployPipeline
 destroyPipeline: _destroyPipeline
 
+deployALB: _deployALB
+
+
+_deployALB:
+	@echo "Creating the ALB..."
+	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-smartoffice-alb --template-body file://elb/template.yaml --parameters file://elb/dev.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
+	@echo "Waiting till all resources have been created... this can take some minutes"
+	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-smartoffice-alb --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
 # ####################################################################################################################################
 # CI / CD
 # ####################################################################################################################################
 
 _deployPipeline:
 	@echo "Creating the Pipeline..."
-	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-cf-pipeline --template-body file://cicd/cloudformation/template.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
+	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --template-body file://cicd/base/template.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
-	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 _destroyPipeline:
 	@echo "Destroying the VPC-DEV stack..."

@@ -1,0 +1,123 @@
+{
+  "Resources": {
+    "Pipeline": {
+      "Type": "AWS::CodePipeline::Pipeline",
+      "DependsOn": "SourceCodeBucket",
+      "Properties": {
+        "ArtifactStore": {
+          "Location": "codepipeline-cf-source",
+          "Type": "S3"
+        },
+        "Name": "CfClimatePipeline-dev",
+        "RestartExecutionOnUpdate": false,
+        "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+        "Stages": [
+        {
+          "Name": "CheckoutSource",
+          "Actions": [
+          {
+            "Name": "CheckoutSource",
+            "ActionTypeId": {
+              "Category": "Source",
+              "Owner": "ThirdParty",
+              "Provider": "GitHub",
+              "Version": "1"
+            },
+            "Configuration": {
+              "Owner": "smartoffice-cloudnative",
+              "Repo": "climate",
+              "Branch": "master",
+              "PollForSourceChanges": "false",
+              "OAuthToken": "0bb47ccb3c8e5895de79260ddc47c53a4153b300"
+            },
+            "OutputArtifacts": [
+            {
+              "Name": "SourceArtifact"
+            }
+            ],
+            "RunOrder": 1
+          }
+          ]
+        },
+        {
+          "Name": "DeployClimateCfInfrastructure",
+          "Actions": [
+          {
+            "Name": "CfClimateECR",
+            "InputArtifacts": [
+            {
+              "Name": "SourceArtifact"
+            }
+            ],
+            "ActionTypeId": {
+              "Category": "Deploy",
+              "Owner": "AWS",
+              "Provider": "CloudFormation",
+              "Version": "1"
+            },
+            "Configuration": {
+              "ActionMode": "CREATE_UPDATE",
+              "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
+              "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
+              "StackName": "climate-ecr-dev",
+              "TemplateConfiguration": "SourceArtifact::infrastructure/stacks/ecr/dev.json",
+              "TemplatePath": "SourceArtifact::infrastructure/stacks/ecr/template.yaml"
+            },
+            "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+            "RunOrder": 2
+          },
+          {
+            "Name": "CfClimateECSTask",
+            "InputArtifacts": [
+            {
+              "Name": "SourceArtifact"
+            }
+            ],
+            "ActionTypeId": {
+              "Category": "Deploy",
+              "Owner": "AWS",
+              "Provider": "CloudFormation",
+              "Version": "1"
+            },
+            "Configuration": {
+              "ActionMode": "CREATE_UPDATE",
+              "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
+              "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
+              "StackName": "dev-ecs-cluster",
+              "TemplateConfiguration": "SourceArtifact::infrastructure/stacks/ecstask/dev.json",
+              "TemplatePath": "SourceArtifact::infrastructure/stacks/ecstask/template.yaml"
+            },
+            "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+            "RunOrder": 3
+          },
+          {
+            "Name": "CfClimateDDB",
+            "InputArtifacts": [
+            {
+              "Name": "SourceArtifact"
+            }
+            ],
+            "ActionTypeId": {
+              "Category": "Deploy",
+              "Owner": "AWS",
+              "Provider": "CloudFormation",
+              "Version": "1"
+            },
+            "Configuration": {
+              "ActionMode": "CREATE_UPDATE",
+              "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
+              "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
+              "StackName": "dev-ecs-cluster",
+              "TemplateConfiguration": "SourceArtifact::infrastructure/stacks/ddb/dev.json",
+              "TemplatePath": "SourceArtifact::infrastructure/stacks/ddb/template.yaml"
+            },
+            "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
+            "RunOrder": 4
+          }
+          ]
+        }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "VpcStack",
+    "ParameterValue": "dev-vpc"
+  },
+  {
+    "ParameterKey": "Stage",
+    "ParameterValue": "dev"
+  }
+]

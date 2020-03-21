@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  "/stacks/vpc/template.json; VPC Network infra. for the SmartOffice-App"
+Parameters:
+  VpcStack:
+    Type: String
+  Stage:
+    Type: String
+
+Resources:
+  SgALB:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${Stage}-sg-smartoffice-alb"
+      GroupDescription: "Security-Group for the SmartOffice-ALB"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0, ::/0"
+          Description: "ingress rule for http on port 8080"
+          FromPort: 8080
+          ToPort: 8080
+      VpcId:
+        Fn::ImportValue: !Sub "${VpcStack}:VPC"
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-${Stage}"
+        - Key: "Environment"
+          Value: !Sub "${Stage}"
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${AWS::StackName}-${Stage}"
+      IpAddressType: "ipv4"
+      Scheme: "internet-facing"
+      Type: "application"
+      SecurityGroups:
+        - !Ref SgALB
+      Subnets:
+        - Fn::ImportValue: !Sub "${VpcStack}:PublicSubnetA"
+        - Fn::ImportValue: !Sub "${VpcStack}:PublicSubnetB"
+        - Fn::ImportValue: !Sub "${VpcStack}:PublicSubnetC"
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-${Stage}"
+        - Key: "Environment"
+          Value: !Sub "${Stage}"
+
+  AlbTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-tg-${Stage}"
+      HealthCheckEnabled: True
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/health"
+      HealthCheckPort: "8080"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200
+      Protocol: "HTTP"
+      Port: 8080
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-tg-${Stage}"
+        - Key: "Environment"
+          Value: !Sub "${Stage}"
+      TargetType: "ip"
+      VpcId:
+        Fn::ImportValue: !Sub "${VpcStack}:VPC"
+
+  AlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Protocol: "HTTP"
+      Port: 8080
+      DefaultActions:
+        - Order: 1
+          Type: "forward"
+          TargetGroupArn: !Ref AlbTargetGroup
+
+Outputs:
+  AlbOutput:
+    Description: The Arn of the ALB
+    Value: !Ref ALB
+    Export:
+      Name: !Sub "${AWS::StackName}:AlbARN"

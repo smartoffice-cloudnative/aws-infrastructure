@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description:  "/stacks/vpc/template.json; VPC Network infra. for the SmartOffice-App"
+Description:  "/stacks/vpc/template.yaml; VPC Network infra. for the SmartOffice-App"
 Parameters:
     VpcCIDR:
       Type: String
@@ -13,85 +13,93 @@ Resources:
       EnableDnsHostnames: True
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}" 
+          Value: !Sub "${AWS::StackName}"
+
   PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: 
-        Fn::Select: 
+      AvailabilityZone:
+        Fn::Select:
           - 0
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetA-${AWS::StackName}"  
+          Value: !Sub "PublicSubnetA-${AWS::StackName}"
+
   PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: 
-        Fn::Select: 
+      AvailabilityZone:
+        Fn::Select:
           - 1
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [1, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetB-${AWS::StackName}" 
+          Value: !Sub "PublicSubnetB-${AWS::StackName}"
+
   PublicSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
-        Fn::Select: 
+        Fn::Select:
           - 2
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [2, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
         - Key: Name
-          Value: !Sub "PublicSubnetC-${AWS::StackName}" 
+          Value: !Sub "PublicSubnetC-${AWS::StackName}"
+
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
-        Fn::Select: 
+        Fn::Select:
           - 0
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [3, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
-        - Key: Name 
-          Value: !Sub "PrivateSubnetA-${AWS::StackName}" 
+        - Key: Name
+          Value: !Sub "PrivateSubnetA-${AWS::StackName}"
+
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
-        Fn::Select: 
+        Fn::Select:
           - 1
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [4, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
         - Key: Name
-          Value: !Sub "PrivateSubnetB-${AWS::StackName}" 
+          Value: !Sub "PrivateSubnetB-${AWS::StackName}"
+
   PrivateSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
-        Fn::Select: 
+        Fn::Select:
           - 2
           - Fn::GetAZs: ""
       VpcId: !Ref VPC
       CidrBlock: !Select [5, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
       Tags:
         - Key: Name
-          Value: !Sub "PrivateSubnetC-${AWS::StackName}" 
+          Value: !Sub "PrivateSubnetC-${AWS::StackName}"
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "InternetGateway-${AWS::StackName}" 
+          Value: !Sub "InternetGateway-${AWS::StackName}"
+
   IgwAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     DependsOn:
@@ -100,6 +108,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
+
   ElasticIpNatGw:
     Type: AWS::EC2::EIP
     DependsOn:
@@ -107,48 +116,54 @@ Resources:
       - IgwAttachment
     Properties:
       Domain: vpc
+
   #currently only one natgtw in one publicSubnet(one AZ) is available for all private subnets(all other AZs):
-  NatGateway: 
+  NatGateway:
     Type: AWS::EC2::NatGateway
     DependsOn:
       - IgwAttachment
-      - ElasticIpNatGw    
-    Properties: 
+      - ElasticIpNatGw
+    Properties:
       AllocationId: !GetAtt ElasticIpNatGw.AllocationId
       SubnetId: !Ref PublicSubnetB
       Tags:
         - Key: Name
-          Value: !Sub "NatGateway-${AWS::StackName}" 
+          Value: !Sub "NatGateway-${AWS::StackName}"
+
   RouteTablePrivateSubnets:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "RouteTablePrivateSubnets-${AWS::StackName}" 
+          Value: !Sub "RouteTablePrivateSubnets-${AWS::StackName}"
     # default route for vpc internal communication(=vpcCIDR<=>local),
     # is created implicitly by cloudformation and cannot be specified.
+
   RouteNATGtw:
     Type: AWS::EC2::Route
-    DependsOn: 
+    DependsOn:
       - RouteTablePrivateSubnets
       - NatGateway
     Properties:
       RouteTableId: !Ref RouteTablePrivateSubnets
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway
+
   PrivateSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
        SubnetId: !Ref PrivateSubnetA
        RouteTableId:
          Ref: RouteTablePrivateSubnets
+
   PrivateSubnetBRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
        SubnetId: !Ref PrivateSubnetB
        RouteTableId:
          Ref: RouteTablePrivateSubnets
+
   PrivateSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -162,28 +177,32 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "RouteTablePublicSubnets-${AWS::StackName}" 
+          Value: !Sub "RouteTablePublicSubnets-${AWS::StackName}"
+
   RouteInetGtw:
     Type: AWS::EC2::Route
-    DependsOn: 
+    DependsOn:
       - IgwAttachment
       - RouteTablePublicSubnets
     Properties:
       RouteTableId: !Ref RouteTablePublicSubnets
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
+
   PublicSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
        SubnetId: !Ref PublicSubnetA
        RouteTableId:
          Ref: RouteTablePublicSubnets
+
   PublicSubnetBRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
        SubnetId: !Ref PublicSubnetB
        RouteTableId:
          Ref: RouteTablePublicSubnets
+
   PublicSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -192,23 +211,40 @@ Resources:
          Ref: RouteTablePublicSubnets
 
 Outputs:
-  VpcCidr:
+  VpcOutput:
     Description: The Id of the VPC which was created by the stack
-    Value: !Ref VpcCIDR
+    Value: !Ref VPC
     Export:
       Name: !Sub "${AWS::StackName}:VPC"
+
   PrivateSubnetA:
     Description: The Cidr of PublicSubnetA
     Value: !Ref PrivateSubnetA
     Export:
       Name: !Sub "${AWS::StackName}:PrivateSubnetA"
   PrivateSubnetB:
-    Description: The Cidr of PrivateSubnetB
+    Description: The id of PrivateSubnetB
     Value: !Ref PrivateSubnetB
     Export:
       Name: !Sub "${AWS::StackName}:PrivateSubnetB"
   PrivateSubnetC:
-    Description: The Cidr of PrivateSubnetC
+    Description: The id of PrivateSubnetC
     Value: !Ref PrivateSubnetC
     Export:
       Name: !Sub "${AWS::StackName}:PrivateSubnetC"
+
+  PublicSubnetA:
+    Description: The id of PublicSubnetA
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetA"
+  PublicSubnetB:
+    Description: The id of PublicSubnetB
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetB"
+  PublicSubnetC:
+    Description: The id of PublicSubnetB
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetB"
