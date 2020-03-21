@@ -40,7 +40,7 @@
                   "Repo": "aws-infrastructure",
                   "Branch": "master",
                   "PollForSourceChanges": "false",
-                  "OAuthToken": "c476f5ad653dcb216345a1efbc53b60433886844"
+                  "OAuthToken": "24a92bf067edab6065bf2cb8c085e556fa0d17bc"
                 },
                 "OutputArtifacts": [
                   {
