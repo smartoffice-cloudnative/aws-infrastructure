@@ -14,7 +14,7 @@ Resources:
       GroupDescription: "Security-Group for the SmartOffice-ALB"
       SecurityGroupIngress:
         - IpProtocol: "tcp"
-          CidrIp: "0.0.0.0/0, ::/0"
+          CidrIp: "0.0.0.0/0"
           Description: "ingress rule for http on port 8080"
           FromPort: 8080
           ToPort: 8080
