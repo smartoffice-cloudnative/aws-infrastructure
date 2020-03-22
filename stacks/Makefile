@@ -24,7 +24,10 @@ deployDEV: _deployDevVPC _deployDevECSCluster _deployDevDynamoDBTable _deployCli
 destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destroyClimateMicroservice
 
 deployBasePipelineOnDev: _deployBasePipelineOnDev
+
 destroyBasePipelineOnDev: _destroyBasePipelineOnDev
+
+deployClimatePipelineOnDev: _deployClimatePipelineOnDev
 
 deployALB: _deployALB
 
@@ -50,10 +53,15 @@ _deployBasePipelineOnDev:
 _destroyBasePipelineOnDev:
 	@echo "Destroying the VPC-DEV stack..."
 	@aws s3 rm s3://codepipeline-cf-source/CfPipeline --recursive
-	@aws cloudformation delete-stack --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+	@aws cloudformation delete-stack --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 	@echo "Waiting till all resources have been destroyed... this can take some minutes"
-	@aws cloudformation wait stack-delete-complete --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+	@aws cloudformation wait stack-delete-complete --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
+
+
+_deployClimatePipelineOnDev:
+	@echo "Creating the Dev-Pipeline..."
+	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-climate-infra-pipeline --template-body file://cicd/climate/template.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 # ####################################################################################################################################
 # D E V - S T A G E

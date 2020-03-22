@@ -2,7 +2,6 @@
   "Resources": {
     "Pipeline": {
       "Type": "AWS::CodePipeline::Pipeline",
-      "DependsOn": "SourceCodeBucket",
       "Properties": {
         "ArtifactStore": {
           "Location": "codepipeline-cf-source",
@@ -28,7 +27,7 @@
               "Repo": "climate",
               "Branch": "master",
               "PollForSourceChanges": "false",
-              "OAuthToken": "0bb47ccb3c8e5895de79260ddc47c53a4153b300"
+              "OAuthToken": "9f5ffbe91c47c9361770e2ef6a0401b89ea4b3b9"
             },
             "OutputArtifacts": [
             {
@@ -83,7 +82,7 @@
               "ActionMode": "CREATE_UPDATE",
               "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
               "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
-              "StackName": "dev-ecs-cluster",
+              "StackName": "dev-ecs-task",
               "TemplateConfiguration": "SourceArtifact::infrastructure/stacks/ecstask/dev.json",
               "TemplatePath": "SourceArtifact::infrastructure/stacks/ecstask/template.yaml"
             },
@@ -107,7 +106,7 @@
               "ActionMode": "CREATE_UPDATE",
               "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
               "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
-              "StackName": "dev-ecs-cluster",
+              "StackName": "dev-climate-ddb",
               "TemplateConfiguration": "SourceArtifact::infrastructure/stacks/ddb/dev.json",
               "TemplatePath": "SourceArtifact::infrastructure/stacks/ddb/template.yaml"
             },

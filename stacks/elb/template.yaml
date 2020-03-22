@@ -15,7 +15,7 @@ Resources:
       SecurityGroupIngress:
         - IpProtocol: "tcp"
           CidrIp: "0.0.0.0/0"
-          Description: "ingress rule for http on port 8080"
+          Description: "ingress rule for tcp on port 8080"
           FromPort: 8080
           ToPort: 8080
       VpcId:
@@ -82,8 +82,18 @@ Resources:
           TargetGroupArn: !Ref AlbTargetGroup
 
 Outputs:
-  AlbOutput:
+  AlbArnOutput:
     Description: The Arn of the ALB
     Value: !Ref ALB
     Export:
       Name: !Sub "${AWS::StackName}:AlbARN"
+  TargetGroupArnOutput:
+    Description: The Arn of the TargetGroup
+    Value: !Ref AlbTargetGroup
+    Export:
+      Name: !Sub "${AWS::StackName}:TargetGroupARN"
+  AlbSecurityGroupIdOutput:
+    Description: The Id of the SecurityGroup of the alb
+    Value: !Ref SgALB
+    Export:
+      Name: !Sub "${AWS::StackName}:AlbSGId"
