@@ -118,7 +118,7 @@
                   "ActionMode": "CREATE_UPDATE",
                   "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
                   "RoleArn": "arn:aws:iam::147376585776:role/codepipeline-cf-vpcstack-role",
-                  "StackName": "dev-ecs-cluster",
+                  "StackName": "dev-smartoffice-vpc",
                   "TemplatePath": "SourceArtifact::stacks/elb/template.yaml",
                   "TemplateConfiguration": "SourceArtifact::stacks/elb/dev.json"
                 },

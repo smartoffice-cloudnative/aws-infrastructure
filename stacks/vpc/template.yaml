@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description:  "/stacks/vpc/template.yaml; VPC Network infra. for the SmartOffice-App"
+Description:  "/stacks/vpc/template.json; VPC Network infra. for the SmartOffice-App"
 Parameters:
     VpcCIDR:
       Type: String

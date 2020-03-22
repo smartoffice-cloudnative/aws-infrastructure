@@ -23,8 +23,8 @@ deployDEV: _deployDevVPC _deployDevECSCluster _deployDevDynamoDBTable _deployCli
 
 destroyDEV: _destroyDevVPC _destroyDevECSCluster _destroyDevDynamoDBTable _destroyClimateMicroservice
 
-deployPipeline: _deployPipeline
-destroyPipeline: _destroyPipeline
+deployBasePipelineOnDev: _deployBasePipelineOnDev
+destroyBasePipelineOnDev: _destroyBasePipelineOnDev
 
 deployALB: _deployALB
 
@@ -40,14 +40,14 @@ _deployALB:
 # CI / CD
 # ####################################################################################################################################
 
-_deployPipeline:
-	@echo "Creating the Pipeline..."
+_deployBasePipelineOnDev:
+	@echo "Creating the Dev-Pipeline..."
 	@aws cloudformation create-stack --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --template-body file://cicd/base/template.json --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
 	@aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME_DEV}-cf-base-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
 
-_destroyPipeline:
+_destroyBasePipelineOnDev:
 	@echo "Destroying the VPC-DEV stack..."
 	@aws s3 rm s3://codepipeline-cf-source/CfPipeline --recursive
 	@aws cloudformation delete-stack --stack-name ${STACK_NAME_DEV}-cf-pipeline --region ${AWS_REGION} --profile ${AWS_PROFILE}
