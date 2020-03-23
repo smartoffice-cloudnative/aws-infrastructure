@@ -87,7 +87,7 @@
               "TemplatePath": "SourceArtifact::infrastructure/stacks/ecstask/template.yaml"
             },
             "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
-            "RunOrder": 3
+            "RunOrder": 2
           },
           {
             "Name": "CfClimateDDB",
@@ -111,7 +111,7 @@
               "TemplatePath": "SourceArtifact::infrastructure/stacks/ddb/template.yaml"
             },
             "RoleArn": "arn:aws:iam::147376585776:role/codepipline-cloudformation-role",
-            "RunOrder": 4
+            "RunOrder": 2
           }
           ]
         }
