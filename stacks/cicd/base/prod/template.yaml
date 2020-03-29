@@ -77,6 +77,8 @@ Resources:
               - ec2:*
               - ecs:*
               - dynamodb:*
+              - elasticloadbalancing:*
+              - iam:CreateServiceLinkedRole
             Resource: "*"
           - Effect: Allow
             Action:
