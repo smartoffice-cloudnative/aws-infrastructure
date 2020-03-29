@@ -11,12 +11,12 @@ STACK_NAME_DEVOPS_PREFIX ?= devops
 
 help:
 	@echo "Usage: "
-	@echo -e "\n To deploy the cross-account base-infrastructure-pipeline:"
+	@echo -e "\nTo deploy the cross-account base-infrastructure-pipeline:"
 	@echo "    make deployBasePipeline"
-	@echo -e "\n  To destroy all Stacks in all accounts:"
+	@echo -e "\nTo destroy all Stacks in all accounts:"
 	@echo "    make destroyBasePipeline"
 
-deployBasePipeline: _deployPreRequirements _deployProdRoleForCiCdCrossAccountAccess _deployBasePipeline
+deployBasePipeline: _deployPreRequirements _deployProdRoleForCiCdCrossAccountAccess _deployBasePipeline _putKmsPolicy
 destroyBasePipeline: _destroyProdStacks _destroyDevOpsStacks
 
 # ####################################################################################################################################
@@ -59,49 +59,55 @@ _deployBasePipeline:
 	@aws cloudformation wait stack-create-complete --stack-name base-cfPipeline-${STACK_NAME_DEVOPS_PREFIX} --profile ${AWS_DEVOPS_PROFILE} --region ${AWS_REGION}
 	@echo "successful created!"
 
+_putKmsPolicy:
+	@aws kms put-key-policy \
+        --policy-name default \
+        --key-id $(shell aws cloudformation describe-stacks --stack-name base-preReq-devops | jq '.Stacks[] | .Outputs[] | select(.OutputValue | contains("kms")) | .OutputValue') \
+        --policy file://cicd/base/devops/cmk-putPolicy.json
+
 # -----------
 # DESTROY:
 # -----------
 _destroyProdStacks:
-	@echo "====Destroying the Prod-Stacks===="
+	@echo " ====Destroying the Prod-Stacks===="
 	@echo -e "\n Start deletion of Prod-ELB"
 	@aws cloudformation delete-stack --stack-name base-elb-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-elb-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 	@echo -e "\n Start deletion of Prod-ECSCluster"
 	@aws cloudformation delete-stack --stack-name base-ecsCluster-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-ecsCluster-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 	@echo -e "\n Start deletion of Prod-VPC"
 	@aws cloudformation delete-stack --stack-name base-vpc-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-vpc-dev --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 	@echo -e "\n Start deletion of Prod-ProdRoleCrossAccountCiCAccess"
 	@aws cloudformation delete-stack --stack-name base-prodRoleCrossAccountCiCAccess-prod --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-prodRoleCrossAccountCiCAccess-prod --region ${AWS_REGION} --profile ${AWS_PROD_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 _destroyDevOpsStacks:
 	@echo -e "\n ====Destroying the DevOps-Stacks===="
-	@echo "Start deletion of cfPipeline"
+	@echo -e "\n Start deletion of cfPipeline"
 	@aws cloudformation delete-stack --stack-name base-cfPipeline-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-cfPipeline-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 	@echo -e "\n Start deletion PreReq-Stack"
-	@aws s3 rm s3://artifactbucket-smartoffice-cf-sourcecode --recursive
+	@aws s3 rb s3://artifactbucket-smartoffice-cf-sourcecode --force
 	@aws cloudformation delete-stack --stack-name base-preReq-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
-	@echo "wait for deletion..."
+	@echo "   wait for deletion..."
 	@aws cloudformation wait stack-delete-complete --stack-name base-preReq-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
-	@echo "Deletion successful finished!"
+	@echo "   Deletion successful finished!"
 
 # ####################################################################################################################################
 # CI / CD - PIPELINE FOR CLIMATE-MICROSERVICE INFRASTRUCTURE
