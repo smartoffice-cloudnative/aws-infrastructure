@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "ProdAccount",
+    "ParameterValue": "496106771575"
+  },
+  {
+    "ParameterKey": "gitHubOAuthToken",
+    "ParameterValue": "02588d4c54942870c0262d86ea195cfb1dfbe673"
+  },
+  {
+    "ParameterKey": "PreReqStack",
+    "ParameterValue": "base-preReq-devops"
+  }
+]

@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: The SmartOffice ECS-Cluster Stack
+Description: "The Cf-Stack for the ecs-cluster"
+
+Parameters:
+  Stage:
+    Type: String
 
 Resources:
   ECSCluster:
@@ -7,12 +11,14 @@ Resources:
     Properties:
       ClusterName: !Sub "${AWS::StackName}"
       Tags:
-        - Key: Name
-          Value: ECS-Cluster-SmartOffice
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}"
+        - Key: "Stage"
+          Value: !Sub "${Stage}"
 
 Outputs:
   ECSClusterOutput:
-    Description: The ECS-Cluster
+    Description: The ecs-cluster arn
     Value: !GetAtt ECSCluster.Arn
     Export:
       Name: !Sub "${AWS::StackName}:ecsArn"

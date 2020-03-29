@@ -1,7 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description:  "/stacks/vpc/template.json; VPC Network infra. for the SmartOffice-App"
+Description: "The Cf-Stack for the VPC"
 Parameters:
     VpcCIDR:
+      Type: String
+    Stage:
       Type: String
 
 Resources:
@@ -14,6 +16,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
@@ -27,6 +31,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PublicSubnetA-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PublicSubnetB:
     Type: AWS::EC2::Subnet
@@ -40,6 +46,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PublicSubnetB-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PublicSubnetC:
     Type: AWS::EC2::Subnet
@@ -53,6 +61,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PublicSubnetC-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
@@ -66,6 +76,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PrivateSubnetA-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
@@ -79,6 +91,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PrivateSubnetB-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   PrivateSubnetC:
     Type: AWS::EC2::Subnet
@@ -92,6 +106,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "PrivateSubnetC-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -99,6 +115,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "InternetGateway-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   IgwAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -129,6 +147,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "NatGateway-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   RouteTablePrivateSubnets:
     Type: AWS::EC2::RouteTable
@@ -137,6 +157,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "RouteTablePrivateSubnets-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
     # default route for vpc internal communication(=vpcCIDR<=>local),
     # is created implicitly by cloudformation and cannot be specified.
 
@@ -178,6 +200,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "RouteTablePublicSubnets-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
 
   RouteInetGtw:
     Type: AWS::EC2::Route
@@ -215,36 +239,36 @@ Outputs:
     Description: The Id of the VPC which was created by the stack
     Value: !Ref VPC
     Export:
-      Name: !Sub "${AWS::StackName}:VPC"
+      Name: !Sub "${AWS::StackName}:VPC-Id"
 
   PrivateSubnetA:
-    Description: The Cidr of PublicSubnetA
+    Description: The Id of PublicSubnetA
     Value: !Ref PrivateSubnetA
     Export:
-      Name: !Sub "${AWS::StackName}:PrivateSubnetA"
+      Name: !Sub "${AWS::StackName}:PrivateSubnetA-Id"
   PrivateSubnetB:
-    Description: The id of PrivateSubnetB
+    Description: The Id of PrivateSubnetB
     Value: !Ref PrivateSubnetB
     Export:
-      Name: !Sub "${AWS::StackName}:PrivateSubnetB"
+      Name: !Sub "${AWS::StackName}:PrivateSubnetB-Id"
   PrivateSubnetC:
-    Description: The id of PrivateSubnetC
+    Description: The Id of PrivateSubnetC
     Value: !Ref PrivateSubnetC
     Export:
-      Name: !Sub "${AWS::StackName}:PrivateSubnetC"
+      Name: !Sub "${AWS::StackName}:PrivateSubnetC-Id"
 
   PublicSubnetA:
-    Description: The id of PublicSubnetA
+    Description: The Id of PublicSubnetA
     Value: !Ref PublicSubnetA
     Export:
-      Name: !Sub "${AWS::StackName}:PublicSubnetA"
+      Name: !Sub "${AWS::StackName}:PublicSubnetA-Id"
   PublicSubnetB:
-    Description: The id of PublicSubnetB
+    Description: The Id of PublicSubnetB
     Value: !Ref PublicSubnetB
     Export:
-      Name: !Sub "${AWS::StackName}:PublicSubnetB"
+      Name: !Sub "${AWS::StackName}:PublicSubnetB-Id"
   PublicSubnetC:
-    Description: The id of PublicSubnetC
+    Description: The Id of PublicSubnetC
     Value: !Ref PublicSubnetC
     Export:
-      Name: !Sub "${AWS::StackName}:PublicSubnetC"
+      Name: !Sub "${AWS::StackName}:PublicSubnetC-Id"

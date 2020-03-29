@@ -1,6 +1,6 @@
 {
   "Parameters": {
-    "VpcStack": "prod-vpc",
+    "VpcStack": "base-vpc-prod",
     "Stage": "prod"
   }
 }

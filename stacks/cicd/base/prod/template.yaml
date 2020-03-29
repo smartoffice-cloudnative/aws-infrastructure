@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Cf-Stack for the prod-role that references the devOps-Account regarding cross-account cicd actions"
+
+Parameters:
+  S3Bucket:
+    Description: "S3 Bucket, which will hold the checked-out artifacts"
+    Type: String
+  DevOpsAccount:
+    Description: "AWS AccountId for the DevOps Account"
+    Type: Number
+  CMKArn:
+    Description: "The ARN of the CMK Key that is used for S3-ArtifactStore enryption/decryption"
+    Type: String
+
+Resources:
+  CFRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "pipelineCfBase-ProdAcc-Role"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref DevOpsAccount
+            Action:
+              - sts:AssumeRole
+      Path: /
+  CFPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "pipelineCfBase-ProdAcc-Policy"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudformation:*
+              - s3:*
+              - iam:PassRole
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - kms:*
+            Resource: !Ref CMKArn
+      Roles:
+        - !Ref CFRole
+
+  CfDeployerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "cloudformationdeployer-role"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  CfDeployerPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: CfDeployerRole
+    Properties:
+      PolicyName: "cloudformationdeployer-policy"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudformation:*
+              - s3:*
+              - iam:PassRole
+              - ec2:*
+              - ecs:*
+              - dynamodb:*
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - 'arn:aws:s3:::artifactbucket-smartoffice-cf-sourcecode'
+              - 'arn:aws:s3:::artifactbucket-smartoffice-cf-sourcecode/*'
+      Roles:
+        - !Ref CfDeployerRole
