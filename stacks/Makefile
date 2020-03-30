@@ -16,7 +16,7 @@ help:
 	@echo -e "\nTo destroy all Stacks in all accounts:"
 	@echo "    make destroyBasePipeline"
 
-deployBasePipeline: _deployPreRequirements _deployProdRoleForCiCdCrossAccountAccess _deployBasePipeline _putKmsPolicy
+deployBasePipeline: _deployPreRequirements _deployProdRoleForCiCdCrossAccountAccess _deployBasePipelineRole  _putKmsPolicy _deployBasePipeline
 destroyBasePipeline: _destroyProdStacks _destroyDevOpsStacks
 
 # ####################################################################################################################################
@@ -28,42 +28,84 @@ destroyBasePipeline: _destroyProdStacks _destroyDevOpsStacks
 # -----------
 _deployPreRequirements:
 	@echo "Creating the base-preReq Stack..."
-	@aws cloudformation create-stack --stack-name base-preReq-${STACK_NAME_DEVOPS_PREFIX} --template-body file://cicd/base/devops/pre-req.yaml \
-		--parameters file://cicd/base/devops/pre-req-vars.json --profile ${AWS_DEVOPS_PROFILE} --region ${AWS_REGION}
+	@aws cloudformation create-stack \
+		--stack-name base-preReq-devops \
+		--template-body file://cicd/base/devops/prereq/template.yaml \
+		--parameters file://cicd/base/devops/prereq/vars.json \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
-	@aws cloudformation wait stack-create-complete --stack-name base-preReq-${STACK_NAME_DEVOPS_PREFIX} --profile ${AWS_DEVOPS_PROFILE} --region ${AWS_REGION}
+	@aws cloudformation wait stack-create-complete \
+		--stack-name base-preReq-${STACK_NAME_DEVOPS_PREFIX} \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
 	@echo "successful created!"
+
 
 _deployProdRoleForCiCdCrossAccountAccess:
 	@echo -e "\n Creating the prodRoleCrossAccountCiCAccess Stack in Prod-Stage..."
-	@aws cloudformation create-stack --stack-name base-prodRoleCrossAccountCiCAccess-${STACK_NAME_PROD_PREFIX} --template-body file://cicd/base/prod/template.yaml --capabilities CAPABILITY_NAMED_IAM \
+	@aws cloudformation create-stack \
+		--stack-name base-prodRoleCrossAccountCiCAccess-prod \
+		--template-body file://cicd/base/prod/template.yaml \
+		--capabilities CAPABILITY_NAMED_IAM \
 		--parameters ParameterKey="S3Bucket",ParameterValue="artifactbucket-smartoffice-cf-sourcecode" \
 		  	ParameterKey="DevOpsAccount",ParameterValue="147376585776" \
 		  	ParameterKey="CMKArn",ParameterValue=$(shell aws cloudformation describe-stacks --stack-name base-preReq-devops | jq '.Stacks[] | .Outputs[] | select(.OutputValue | contains("kms")) | .OutputValue') \
-		--profile ${AWS_PROD_PROFILE} --region ${AWS_REGION}
+		--profile ${AWS_PROD_PROFILE} \
+		--region ${AWS_REGION}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
-	@aws cloudformation wait stack-create-complete --stack-name base-prodRoleCrossAccountCiCAccess-${STACK_NAME_PROD_PREFIX} --profile ${AWS_PROD_PROFILE} --region ${AWS_REGION}
+	@aws cloudformation wait stack-create-complete \
+		--stack-name base-prodRoleCrossAccountCiCAccess-prod \
+		--profile ${AWS_PROD_PROFILE} \
+		--region ${AWS_REGION}
 	@echo "successful created!"
 
-_deployBasePipeline:
-	@echo -e "\n Creating the base-cfPipeline-dev Stack..."
-	@aws cloudformation create-stack --stack-name base-cfPipeline-${STACK_NAME_DEVOPS_PREFIX} --template-body file://cicd/base/devops/template.yaml \
-		--parameters ParameterKey="ProdAccount",ParameterValue="496106771575" \
-			ParameterKey="gitHubOAuthToken",ParameterValue=${GITHUB_TOKEN} \
-			ParameterKey="PreReqStack",ParameterValue="base-preReq-devops" \
-		 --profile ${AWS_DEVOPS_PROFILE} --region ${AWS_REGION} --capabilities CAPABILITY_NAMED_IAM
+_deployBasePipelineRole:
+	@echo "Creating the CodePipeline-Role Stack..."
+	@aws cloudformation create-stack \
+		--stack-name base-codePipelineRole-devops \
+		--template-body file://cicd/base/devops/basepipeline-role/template.yaml \
+		--parameters file://cicd/base/devops/basepipeline-role/vars.json \
+		--capabilities CAPABILITY_NAMED_IAM \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
 
 	@echo "Waiting till all resources have been created... this can take some minutes"
-	@aws cloudformation wait stack-create-complete --stack-name base-cfPipeline-${STACK_NAME_DEVOPS_PREFIX} --profile ${AWS_DEVOPS_PROFILE} --region ${AWS_REGION}
+	@aws cloudformation wait stack-create-complete \
+		--stack-name base-codePipelineRole-devops \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
 	@echo "successful created!"
 
 _putKmsPolicy:
 	@aws kms put-key-policy \
         --policy-name default \
-        --key-id $(shell aws cloudformation describe-stacks --stack-name base-preReq-devops | jq '.Stacks[] | .Outputs[] | select(.OutputValue | contains("kms")) | .OutputValue') \
+        --key-id $(shell aws cloudformation describe-stacks \
+        --stack-name base-preReq-devops | jq '.Stacks[] | .Outputs[] | select(.OutputValue | contains("kms")) | .OutputValue') \
         --policy file://cicd/base/devops/cmk-putPolicy.json
+
+_deployBasePipeline:
+	@echo -e "\n Creating the base-cfPipeline-dev Stack..."
+	@aws cloudformation create-stack \
+		--stack-name base-cfPipeline-devops \
+		--template-body file://cicd/base/devops/basepipeline/template.yaml \
+		--parameters ParameterKey="ProdAccount",ParameterValue="496106771575" \
+			ParameterKey="gitHubOAuthToken",ParameterValue=${GITHUB_TOKEN} \
+			ParameterKey="PreReqStack",ParameterValue="base-preReq-devops" \
+			ParameterKey="CodePipelineRoleStack",ParameterValue="base-codePipelineRole-devops" \
+		 --profile ${AWS_DEVOPS_PROFILE} \
+		 --region ${AWS_REGION} \
+		 --capabilities CAPABILITY_NAMED_IAM
+
+	@echo "Waiting till all resources have been created... this can take some minutes"
+	@aws cloudformation wait stack-create-complete \
+		--stack-name base-cfPipeline-devops \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
+	@echo "successful created!"
+
 
 # -----------
 # DESTROY:
@@ -109,6 +151,12 @@ _destroyDevOpsStacks:
 	@aws cloudformation wait stack-delete-complete --stack-name base-preReq-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
 	@echo "   Deletion successful finished!"
 
+	@echo -e "\n Start deletion of CodePipeline-Role"
+	@aws cloudformation delete-stack --stack-name base-codePipelineRole-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
+	@echo "   wait for deletion..."
+	@aws cloudformation wait stack-delete-complete --stack-name base-codePipelineRole-devops --region ${AWS_REGION} --profile ${AWS_DEVOPS_PROFILE}
+	@echo "   Deletion successful finished!"
+
 # ####################################################################################################################################
 # CI / CD - PIPELINE FOR CLIMATE-MICROSERVICE INFRASTRUCTURE
 # ####################################################################################################################################
@@ -117,6 +165,25 @@ _destroyDevOpsStacks:
 # CREATE:
 # -----------
 # todo...
+deployClimateCfPipeline:
+	@echo -e "\n Creating the climate-cfPipeline-dev Stack..."
+	@aws cloudformation create-stack \
+		--stack-name climate-cfPipeline-dev \
+		--template-body file://cicd/climate/template.yaml \
+		--parameters ParameterKey="ProdAccount",ParameterValue="496106771575" \
+			ParameterKey="gitHubOAuthToken",ParameterValue=${GITHUB_TOKEN} \
+			ParameterKey="PreReqStack",ParameterValue="base-preReq-devops" \
+			ParameterKey="CodePipelineRoleStack",ParameterValue="base-codePipelineRole-devops" \
+		 --profile ${AWS_DEVOPS_PROFILE} \
+		 --region ${AWS_REGION} \
+		 --capabilities CAPABILITY_NAMED_IAM
+
+	@echo "Waiting till all resources have been created... this can take some minutes"
+	@aws cloudformation wait stack-create-complete \
+		--stack-name climate-cfPipeline-dev \
+		--profile ${AWS_DEVOPS_PROFILE} \
+		--region ${AWS_REGION}
+	@echo "successful created!"
 
 # -----------
 # DESTROY:
