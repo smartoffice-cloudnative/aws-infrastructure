@@ -11,7 +11,7 @@ In Case-01 there is a Pipeline for the "base-cloudformation-stack". These are ge
 like VPC, ECS-Cluster, ALB etc.
 
 Then, in this Case-01, for every Microservice you have:
-* One Pipeline for each Microservice specfic Cloudformation-Stacks
+* One Pipeline for each Microservice specific Cloudformation-Stacks
 * One Pipeline for each Microservice-CodeDeployment to ECS itself
 
 ---
@@ -46,6 +46,13 @@ Single Steps of Case-01:
 ---
 ---
 
-## Case-02: One central CF+CodePipeline that can handle all Microservices:
+## Case-02: One central CF+CodeDeploymet Pipeline that can handle all Microservices:
 
-todo...
+In Case-02 there is a Pipeline for the "base-cloudformation-stack". These are general Resources (not Microservice specifice)
+like VPC, ECS-Cluster, ALB etc.
+
+Then, in this Case-02, for all Microservice you have:
+* One central Pipeline with that you can deploy all microservice-specific CfStacks
+* One central Pipeline that you can use for the CodeDeployment of all Microservices
+
+todo / content of Case-02 follows soon...
