@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Id": "base-preReq-devops",
+  "Statement": [
+    {
+      "Sid": "Allows admin of the key",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::147376585776:root",
+          "arn:aws:iam::147376585776:role/cfBasePipeline-Role"
+        ]
+      },
+      "Action": "kms:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Allow use of the keys for ProdAccount",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::496106771575:root",
+          "arn:aws:iam::496106771575:role/cfBasePipeline-CrossAccount-Role"
+        ]
+      },
+      "Action": "kms:*",
+      "Resource": "*"
+    }
+  ]
+}

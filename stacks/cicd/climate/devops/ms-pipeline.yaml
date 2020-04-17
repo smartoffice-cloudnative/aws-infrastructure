@@ -1,0 +1,228 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation-Stack for the Microservice-Deploy-Pipeline. This stack is created in the DevOps Account.
+
+Parameters:
+  gitHubOAuthToken:
+    Description: "The gitHub-OAuthToken for the authentication between github and aws-codepipeline"
+    Type: String
+  PreReqStack:
+    Description: "The StackName of the PreReqStack"
+    Type: String
+  MsEcrCrossAccountRole:
+    Description: "The Arn of the MsPipelineCrossAccountRole from the specific environment (dev, prod, etc.)"
+    Type: String
+  EcsClusterName:
+    Description: "The EcsClusterName of the specific environment (dev, prod etc.)"
+    Type: String
+  EcsServiceName:
+    Description: "The EcsServiceName of an environment-specific EcsCluster (dev, prod etc.)"
+    Type: String
+  GitRepoName:
+    Description: "The name of the Microservice git-repository"
+    Type: String
+
+Resources:
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeBuildServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+  CodeBuildServiceRolePolicies:
+    Type: AWS::IAM::Policy
+    DependsOn: CodeBuildServiceRole
+    Properties:
+      PolicyName: "CodeBuildServiceRolePolicies"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Resource: "*"
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - ecr:GetAuthorizationToken
+              - ecr:*
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:GetObjectVersion
+              - ecr:*
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+                  - '/*'
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Resource: !Sub ${MsEcrCrossAccountRole}
+      Roles:
+        - !Ref CodeBuildServiceRole
+
+  MicroservicePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MicroservicePipelineRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+
+  MicroservicePipelineRolePolicies:
+    Type: AWS::IAM::Policy
+    DependsOn: MicroservicePipelineRole
+    Properties:
+      PolicyName: "MicroservicePipelineRolePolicies"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ecs:DescribeServices
+              - ecs:DescribeTaskDefinition
+              - ecs:DescribeTasks
+              - ecs:ListTasks
+              - ecs:RegisterTaskDefinition
+              - ecs:UpdateService
+              - ecr:*
+              - codebuild:StartBuild
+              - codebuild:BatchGetBuilds
+              - iam:PassRole
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              Fn::ImportValue: !Sub ${PreReqStack}:CMK-Arn
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:GetObjectVersion
+              - s3:GetBucketVersioning
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - !Sub ${MsEcrCrossAccountRole}
+      Roles:
+        - !Ref MicroservicePipelineRole
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - CodeBuildServiceRole
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:2.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: True
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+      #          - Name: REPOSITORY_URI
+      #            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Repository}
+      Name: !Ref AWS::StackName
+      ServiceRole: !Ref CodeBuildServiceRole
+
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - MicroservicePipelineRole
+      - MicroservicePipelineRolePolicies
+      - CodeBuildProject
+    Properties:
+      Name: "climate-codePipeline"
+      RoleArn: !GetAtt MicroservicePipelineRole.Arn
+      ArtifactStore:
+        EncryptionKey:
+          Id:
+            Fn::ImportValue: !Sub ${PreReqStack}:CMK-Arn
+          Type: "KMS"
+        Location:
+          Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+        Type: "S3"
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: App
+              ActionTypeId:
+                Category: Source
+                Provider: GitHub
+                Owner: ThirdParty
+                Version: 1
+              Configuration:
+                Owner: "smartoffice-cloudnative"
+                Repo: !Sub ${GitRepoName}
+                Branch: "master"
+                OAuthToken: !Ref gitHubOAuthToken
+              OutputArtifacts:
+                - Name: App
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: App
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: ECS
+              Configuration:
+                ClusterName: !Sub ${EcsClusterName}
+                ServiceName: !Sub ${EcsServiceName}
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+              RoleArn: !Sub ${MsEcrCrossAccountRole}

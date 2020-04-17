@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Cf-Stack for the cicd-pipeline regarding base-infrastructure in all stages"
+
+Parameters:
+  #  DevAccount:
+  #    Description: "AWS AccountId for the dev-environment"
+  #    Type: Number
+  ProdAccount:
+    Description: "AWS AccountId for the prod-environment"
+    Type: Number
+  gitHubOAuthToken:
+    Description: "The gitHub oauth-token for authentication between github and aws-codepipeline"
+    Type: String
+  PreReqStack:
+    Description: "StackName of the PreReqStack"
+    Type: String
+  CodePipelineRoleStack:
+    Description: "StackName of the CodePipeline-Role for Cloudformation-Deployment"
+    Type: String
+  CfBasePipelineCrossAccountProdRoleArn:
+    Description: "RoleArn of the cfBasePipeline-CrossAccount-Role"
+    Type: String
+  CfDeployerCrossAccountProdRoleArn:
+    Description: "RoleArn of the cloudformationDeployer-Role"
+    Type: String
+
+Resources:
+
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        EncryptionKey:
+          Id:
+            Fn::ImportValue: !Sub ${PreReqStack}:CMK-Arn
+          Type: "KMS"
+        Location:
+          Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+        Type: "S3"
+      Name: "climate-cfPipeline-dev"
+      RestartExecutionOnUpdate: False
+      RoleArn:
+        Fn::ImportValue: !Sub ${CodePipelineRoleStack}:roleArn
+      Stages:
+        - Name: Checkout-SourceCode
+          Actions:
+            - Name: Checkout-SourceCode
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: "1"
+              Configuration:
+                Owner: "smartoffice-cloudnative"
+                Repo: "climate"
+                Branch: "master"
+                PollForSourceChanges: False
+                OAuthToken: !Ref gitHubOAuthToken
+              OutputArtifacts:
+                - Name: "SourceArtifact"
+              RunOrder: 1
+        - Name: "Deploy-to-Production"
+          Actions:
+            - Name: "deploy-ecr"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                StackName: "climate-ecr-dev"
+                RoleArn: !Sub ${CfDeployerCrossAccountProdRoleArn}
+                TemplateConfiguration: "SourceArtifact::infrastructure/stacks/ecr/dev.json"
+                TemplatePath: "SourceArtifact::infrastructure/stacks/ecr/template.yaml"
+              InputArtifacts:
+                - Name: "SourceArtifact"
+              RoleArn: !Sub ${CfBasePipelineCrossAccountProdRoleArn}
+              RunOrder: 1
+
+            - Name: "deploy-ecsTaskAndService"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                StackName: "climate-ecsTaskAndService-dev"
+                RoleArn: !Sub ${CfDeployerCrossAccountProdRoleArn}
+                TemplateConfiguration: "SourceArtifact::infrastructure/stacks/ecstask/dev.json"
+                TemplatePath: "SourceArtifact::infrastructure/stacks/ecstask/template.yaml"
+              InputArtifacts:
+                - Name: "SourceArtifact"
+              RoleArn: !Sub ${CfBasePipelineCrossAccountProdRoleArn}
+              RunOrder: 1
+
+            - Name: "deploy-ddb"
+              ActionTypeId:
+                Category: "Deploy"
+                Owner: "AWS"
+                Provider: "CloudFormation"
+                Version: "1"
+              Configuration:
+                ActionMode: "CREATE_UPDATE"
+                Capabilities: "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND"
+                StackName: "climate-ddb-dev"
+                RoleArn: !Sub ${CfDeployerCrossAccountProdRoleArn}
+                TemplatePath: "SourceArtifact::infrastructure/stacks/ddb/template.yaml"
+                TemplateConfiguration: "SourceArtifact::infrastructure/stacks/ddb/dev.json"
+              InputArtifacts:
+                - Name: "SourceArtifact"
+              RoleArn: !Sub ${CfBasePipelineCrossAccountProdRoleArn}
+              RunOrder: 2

@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "The Cf-Stack for the VPC"
+Parameters:
+    VpcCIDR:
+      Type: String
+    Stage:
+      Type: String
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: True
+      EnableDnsHostnames: True
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicSubnetA-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [1, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicSubnetB-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [2, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PublicSubnetC-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [3, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PrivateSubnetA-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [4, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PrivateSubnetB-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs: ""
+      VpcId: !Ref VPC
+      CidrBlock: !Select [5, !Cidr [!GetAtt VPC.CidrBlock, 6, 5]]
+      Tags:
+        - Key: Name
+          Value: !Sub "PrivateSubnetC-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "InternetGateway-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  IgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    DependsOn:
+      - InternetGateway
+      - VPC
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  ElasticIpNatGw:
+    Type: AWS::EC2::EIP
+    DependsOn:
+      - VPC
+      - IgwAttachment
+    Properties:
+      Domain: vpc
+
+  #currently only one natgtw in one publicSubnet(one AZ) is available for all private subnets(all other AZs):
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn:
+      - IgwAttachment
+      - ElasticIpNatGw
+    Properties:
+      AllocationId: !GetAtt ElasticIpNatGw.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags:
+        - Key: Name
+          Value: !Sub "NatGateway-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  RouteTablePrivateSubnets:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "RouteTablePrivateSubnets-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+    # default route for vpc internal communication(=vpcCIDR<=>local),
+    # is created implicitly by cloudformation and cannot be specified.
+
+  RouteNATGtw:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - RouteTablePrivateSubnets
+      - NatGateway
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateSubnets
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetA
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetB
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PrivateSubnetC
+       RouteTableId:
+         Ref: RouteTablePrivateSubnets
+
+  RouteTablePublicSubnets:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "RouteTablePublicSubnets-${AWS::StackName}"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+  RouteInetGtw:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - IgwAttachment
+      - RouteTablePublicSubnets
+    Properties:
+      RouteTableId: !Ref RouteTablePublicSubnets
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetA
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetB
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+       SubnetId: !Ref PublicSubnetC
+       RouteTableId:
+         Ref: RouteTablePublicSubnets
+
+Outputs:
+  VpcOutput:
+    Description: The Id of the VPC which was created by the stack
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}:VPC-Id"
+
+  PrivateSubnetA:
+    Description: The Id of PublicSubnetA
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}:PrivateSubnetA-Id"
+  PrivateSubnetB:
+    Description: The Id of PrivateSubnetB
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}:PrivateSubnetB-Id"
+  PrivateSubnetC:
+    Description: The Id of PrivateSubnetC
+    Value: !Ref PrivateSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}:PrivateSubnetC-Id"
+
+  PublicSubnetA:
+    Description: The Id of PublicSubnetA
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetA-Id"
+  PublicSubnetB:
+    Description: The Id of PublicSubnetB
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetB-Id"
+  PublicSubnetC:
+    Description: The Id of PublicSubnetC
+    Value: !Ref PublicSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}:PublicSubnetC-Id"

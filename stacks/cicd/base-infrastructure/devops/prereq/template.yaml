@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Cf-Stack for the inital resources(s3-artifactBucket & kmsKey) regarding ci/cd"
+
+Parameters:
+  #  DevAccount:
+  #    Description: "AWS AccountId for the dev-environment"
+  #    Type: Number
+  ProdAccount:
+    Description: "AWS AccountId for the prod-environment"
+    Type: Number
+  Stage:
+    Type: String
+
+Resources:
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS-Key used by codePipeline to enrypt/decrypt the sourceCode in s3"
+      EnableKeyRotation: True
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: !Ref AWS::StackName
+        Statement:
+          - Sid: Allows admin of the key
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+                # - !Sub "arn:aws:iam::${AWS::AccountId}:role/pipelineCfBase-Role"
+                #- !Sub "arn:aws:iam::${AWS::AccountId}:role/pipelineCfBase-Role"
+            Action:
+              - "kms:*"
+            Resource: "*"
+          - Sid: "Allow use of the keys for ProdAccount"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${ProdAccount}:root"
+                # - !Sub "arn:aws:iam::${ProdAccount}:role/pipelineCfBase-ProdAcc-Role"
+                #- !Sub "arn:aws:iam::${ProdAccount}:role/pipelineCfBase-ProdAcc-Role"
+                #- !Sub "arn:aws:iam::${DevAccount}:root"
+                #- !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-CodeBuildRole"
+            Action:
+              - "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Sub "KmsKeyCodePipeline"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+  KMSAlias:
+    Type: AWS::KMS::Alias
+    DependsOn: KMSKey
+    Properties:
+      AliasName: !Sub alias/codepipeline-crossaccounts
+      TargetKeyId: !Ref KMSKey
+
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    DependsOn: KMSAlias
+    Properties:
+      BucketName: "artifactbucket-smartoffice-cf-sourcecode"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref KMSKey
+              SSEAlgorithm: 'aws:kms'
+      Tags:
+        - Key: Name
+          Value: "artifactbucket-smartoffice-cf-sourcecode"
+        - Key: Stage
+          Value: !Sub "${Stage}"
+
+Outputs:
+  CMKOutput:
+    Description: "The Arn of ArtifactStore CMK"
+    Value: !GetAtt KMSKey.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:CMK-Arn"
+  ArtifactBucketOutput:
+    Description: "The S3 ArtifactStore Name"
+    Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub "${AWS::StackName}:S3ArtifactBucket"
+  ArtifactBucketArnOutput:
+    Description: "The S3 ArtifactStore Arn"
+    Value: !GetAtt ArtifactBucket.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:S3ArtifactBucket"

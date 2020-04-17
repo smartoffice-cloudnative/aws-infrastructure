@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation-Stack for the MsPipelineCrossAccountRole. This role is creatd in every staging-environment like dev, prod etc.
+
+Parameters:
+  DevOpsAccountId:
+    Description: "AWS AccountId for the specific Trusted-Relationship(environment)"
+    Type: Number
+  CmkArn:
+    Description: "AWS Arn of the CMK(in DevOpsAccount) that is used to encrypt/decrypt the artifact-bucket"
+    Type: String
+  ArtifactBucketName:
+    Description: "AWS Arn of the ArtifactBucket(in DevOpsAccount)"
+    Type: String
+
+Resources:
+  MsEcrCrossAccountRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MsEcrCrossAccountRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub ${DevOpsAccountId}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerServiceFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser'
+      Path: /
+
+  MsPipelineCrossAccountRolePolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: MsEcrCrossAccountRole
+    Properties:
+      PolicyName: "MsEcrCrossAccountPolicies"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ecs:*
+              - ecr:*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !Sub ${CmkArn}
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:GetObjectVersion
+              - s3:GetBucketVersioning
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Sub ${ArtifactBucketName}
+                  - '/*'
+      Roles:
+        - !Ref MsEcrCrossAccountRole
+
+Outputs:
+  MicroservicePipelineRoleOutput:
+    Description: The Arn of the MsEcrCrossAccountRole
+    Value: !GetAtt MsEcrCrossAccountRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}:roleArn

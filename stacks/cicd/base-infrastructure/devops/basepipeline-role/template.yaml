@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: IAM Role for the cloudformation basePipeline
+
+Parameters:
+  ProdAccount:
+    Description: "AWS AccountId for the prod-environment"
+    Type: Number
+  PreReqStack:
+    Description: "StackName of the PreReqStack"
+    Type: String
+  CfCrossAccountProdRoleArn:
+    Description: "Arn of the cfBasePipeline-CrossAccount-Role"
+    Type: String
+
+Resources:
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "cfBasePipeline-Role"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  PipelineRolePolicies:
+    Type: AWS::IAM::Policy
+    DependsOn: PipelineRole
+    Properties:
+      PolicyName: "cfBasePipeline-Policies"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - codepipeline:*
+              - iam:ListRoles
+              - cloudformation:Describe*
+              - cloudFormation:List*
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+              - s3:*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              Fn::ImportValue: !Sub ${PreReqStack}:CMK-Arn
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - Fn::ImportValue: !Sub ${PreReqStack}:S3ArtifactBucket
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - !Sub ${CfCrossAccountProdRoleArn}
+              - !Sub arn:aws:iam::${AWS::AccountId}:role/cfBasePipeline-Role
+      Roles:
+        - !Ref PipelineRole
+
+Outputs:
+  CodePipelineRoleOutput:
+    Description: The Arn of the CodePipeline-Role
+    Value: !GetAtt PipelineRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:roleArn"
+

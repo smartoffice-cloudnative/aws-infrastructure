@@ -1,0 +1,22 @@
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::496106771575:role/cfBasePipeline-CrossAccount-Role",
+          "arn:aws:iam::496106771575:role/MsEcrCrossAccountRole",
+          "arn:aws:iam::147376585776:role/cfBasePipeline-Role",
+          "arn:aws:iam::147376585776:role/MicroservicePipelineRole",
+          "arn:aws:iam::147376585776:role/CodeBuildServiceRole"
+        ]
+      },
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::artifactbucket-smartoffice-cf-sourcecode",
+        "arn:aws:s3:::artifactbucket-smartoffice-cf-sourcecode/*"
+      ]
+    }
+  ]
+}

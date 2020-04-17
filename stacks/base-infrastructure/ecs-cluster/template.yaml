@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "The Cf-Stack for the ecs-cluster"
+
+Parameters:
+  Stage:
+    Type: String
+
+Resources:
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Sub "${AWS::StackName}"
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}"
+        - Key: "Stage"
+          Value: !Sub "${Stage}"
+
+Outputs:
+  ECSClusterArnOutput:
+    Description: The ECS-Cluster ARN
+    Value: !GetAtt ECSCluster.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}:ecsArn"
+  ECSClusterNameOutput:
+    Description: The Name of the ECS-Cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub "${AWS::StackName}:ecsName"
