@@ -27,6 +27,10 @@ Then, in this Case-01, for every Microservice you have:
 
 #### How to setup the Case-01
 
+Prerequirements:
+* OAuth Token for AWS Codepipeline authentication against the 'aws-infrastructure' repo must be available in 
+your ENV-VARs with the name `GITHUB_TOKEN`
+
 Use the [Makefile](./Makefile) that creates step-by-step the following Stacks with the associated Resources.
 Enter `make help` to see how you can use the Makefile.
 

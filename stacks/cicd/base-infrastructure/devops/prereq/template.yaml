@@ -87,4 +87,4 @@ Outputs:
     Description: "The S3 ArtifactStore Arn"
     Value: !GetAtt ArtifactBucket.Arn
     Export:
-      Name: !Sub "${AWS::StackName}:S3ArtifactBucket"
+      Name: !Sub "${AWS::StackName}:S3ArtifactBucket-Arn"

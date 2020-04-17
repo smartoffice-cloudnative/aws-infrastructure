@@ -9,14 +9,18 @@ STACK_NAME_DEVOPS_PREFIX ?= devops
 
 help:
 	@echo "Usage: "
-	@echo -e "\nTo deploy the pipeline for the base-infrastructure:"
-	@echo "    1.) 'make deployPipelineForBaseInfrastructure'"
+	@echo -e "\n1.) deploy the pipeline for the base-infrastructure:"
+	@echo "   'make deployPipelineForBaseInfrastructure'"
+	@echo -e "\n2.) deploy the pipeline for the microservice-specific-infrastructure:"
 	@echo "    2.) 'make deployPipelineForClimateInfrastructure'"
-	@echo "    3.) 'make deployPipelineForClimateMicroservice'"
 	@echo -e "\nTo destroy all Stacks in all accounts:"
 	@echo "    make destroyAllStacksInAllStages"
 
 deployPipelineForBaseInfrastructure: _deployPreRequirements _deployCfBasePipelineRoleForCrossAccountAccess _deployBasePipelineRole  _putKmsPolicy _deployBasePipeline
+deployPipelineForMsInfrastructure:
+deployPipelineForMsCodeDeployment:
+
+
 destroyPipelineForBaseInfrastructure: _destroyProdStacks _destroyDevOpsStacks
 
 # ####################################################################################################################################

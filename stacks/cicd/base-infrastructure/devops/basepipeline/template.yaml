@@ -91,7 +91,7 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 StackName: "base-ecsCluster-dev"
                 RoleArn: !Sub ${CfDeployerCrossAccountProdRoleArn}
-                TemplateConfiguration: "stacks/base-infrastructure/ecs-cluster/dev.json"
+                TemplateConfiguration: "SourceArtifact::stacks/base-infrastructure/ecs-cluster/dev.json"
                 TemplatePath: "SourceArtifact::stacks/base-infrastructure/ecs-cluster/template.yaml"
               InputArtifacts:
                 - Name: "SourceArtifact"
